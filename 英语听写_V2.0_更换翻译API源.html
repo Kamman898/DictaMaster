@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流利听写 - Instant Check</title>
+    <style>
+        :root {
+            --primary: #2196F3;
+            --success: #4CAF50;
+            --error: #FF5252;
+            --bg: #f8f9fa;
+            --text: #333;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 顶部进度 */
+        .progress-wrap {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        /* 1. 设置界面 */
+        #setup-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        textarea {
+            width: 80%;
+            max-width: 800px;
+            height: 200px;
+            padding: 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            font-size: 16px;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-start {
+            margin-top: 20px;
+            padding: 12px 40px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+            transition: transform 0.1s;
+        }
+
+        .btn-start:active {
+            transform: scale(0.96);
+        }
+
+        /* 2. 听写界面 */
+        #game-screen {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        #translation-box {
+            font-size: 22px;
+            color: #555;
+            margin-bottom: 50px;
+            text-align: center;
+            min-height: 30px;
+            font-weight: 500;
+        }
+
+        /* 单词容器 */
+        #word-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 输入框样式 */
+        .word-input {
+            font-family: 'Courier New', monospace;
+            font-size: 28px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid #ced4da;
+            text-align: center;
+            color: #333;
+            outline: none;
+            padding: 5px 0;
+            transition: all 0.2s;
+            border-radius: 0;
+        }
+
+        .word-input:focus {
+            border-bottom-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        /* 正确样式 */
+        .word-input.correct {
+            border-bottom-color: var(--success);
+            color: var(--success);
+            font-weight: bold;
+            background-color: rgba(76, 175, 80, 0.05);
+            /* 淡淡的绿色背景 */
+            border-radius: 4px;
+        }
+
+        /* 错误动画 */
+        .word-input.shake {
+            animation: shake 0.4s ease-in-out;
+            border-bottom-color: var(--error);
+            color: var(--error);
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-6px);
+            }
+
+            75% {
+                transform: translateX(6px);
+            }
+        }
+
+        /* 底部提示 */
+        #status-bar {
+            margin-top: 40px;
+            font-size: 14px;
+            color: #aaa;
+            display: flex;
+            gap: 20px;
+        }
+
+        .key-badge {
+            background: #e9ecef;
+            color: #666;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ddd;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="progress-wrap">
+        <div class="progress-bar" id="progress"></div>
+    </div>
+
+    <!-- Setup -->
+    <div id="setup-screen">
+        <h2 style="color: #444;">Step 1: 粘贴英文内容</h2>
+        <textarea id="raw-text" placeholder="Paste your English text here...
+Example:
+Success is not final, failure is not fatal: it is the courage to continue that counts."></textarea>
+        <button class="btn-start" onclick="initApp()">开始听写 (Start)</button>
+        <p style="font-size:12px; color:#999; margin-top:10px;">系统将按逗号、句号自动拆分，并自动翻译。</p>
+    </div>
+
+    <!-- Game -->
+    <div id="game-screen">
+        <div id="translation-box">正在准备...</div>
+
+        <div id="word-container">
+            <!-- 动态生成输入框 -->
+        </div>
+
+        <div id="status-bar">
+            <span><span class="key-badge">Space</span> 确认并跳转</span>
+            <span><span class="key-badge">Ctrl</span> 重读</span>
+            <span><span class="key-badge">Ctrl + M</span> 提示当前词</span>
+        </div>
+    </div>
+
+    <script>
+        // --- 核心数据 ---
+        let segments = []; // [{text: "Hello,", words: ["Hello"], translation: "你好"}]
+        let currentSegIndex = 0;
+
+        // --- 初始化 ---
+        function initApp() {
+            const text = document.getElementById('raw-text').value;
+            if (!text.trim()) return alert("请输入内容");
+
+            // 1. 预处理文本：按标点符号分割成小段
+            // 正则：匹配非标点内容，后跟可选的标点
+            const rawSegments = text.replace(/([,.;?!:])/g, "$1|").split("|");
+
+            segments = [];
+            for (let raw of rawSegments) {
+                let cleanText = raw.trim();
+                if (cleanText) {
+                    // 拆分为单词
+                    let words = cleanText.split(/\s+/);
+                    segments.push({
+                        fullText: cleanText,
+                        words: words,
+                        translation: null
+                    });
+                }
+            }
+
+            if (segments.length === 0) return;
+
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+
+            loadSegment(0);
+        }
+
+        // --- 加载一段新的听写 ---
+        async function loadSegment(index) {
+            if (index >= segments.length) {
+                alert("恭喜！全部听写完成！");
+                location.reload();
+                return;
+            }
+            currentSegIndex = index;
+
+            // 进度条
+            const pct = (index / segments.length) * 100;
+            document.getElementById('progress').style.width = pct + "%";
+
+            // 翻译
+            const transBox = document.getElementById('translation-box');
+            transBox.innerHTML = '<span class="loader"></span> 翻译中...';
+
+            if (!segments[index].translation) {
+                segments[index].translation = await fetchTranslation(segments[index].fullText);
+            }
+            transBox.innerText = segments[index].translation;
+
+            // 生成输入框
+            renderInputs(segments[index].words);
+
+            // 播放音频
+            playAudio();
+        }
+
+        // --- 生成单词输入框 ---
+        function renderInputs(words) {
+            const container = document.getElementById('word-container');
+            container.innerHTML = "";
+
+            words.forEach((word, idx) => {
+                const cleanWord = word.replace(/[^a-zA-Z0-9']/g, ""); // 去除标点用于校验
+                if (!cleanWord) return; // 跳过纯标点
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'input-wrapper';
+
+                const input = document.createElement('input');
+                input.className = 'word-input';
+                input.type = 'text';
+                input.autocomplete = "off";
+                input.spellcheck = false;
+
+                // 计算大致宽度 (ch单位)
+                input.style.width = Math.max(cleanWord.length, 2) + 2 + 'ch';
+
+                // 数据绑定
+                input.dataset.answer = cleanWord;
+                input.dataset.index = idx;
+
+                // 事件监听
+                input.addEventListener('keydown', handleKeydown);
+                input.addEventListener('input', (e) => {
+                    // 兼容性：如果用户输入的内容完全匹配（包括大小写），也可以自动触发（可选）
+                    // 这里为了防止误触，我们主要依赖 Space/Enter
+                });
+
+                wrapper.appendChild(input);
+                container.appendChild(wrapper);
+            });
+
+            // 聚焦第一个
+            const firstInput = container.querySelector('input');
+            if (firstInput) firstInput.focus();
+        }
+
+        // --- 核心交互逻辑 ---
+        function handleKeydown(e) {
+            const input = e.target;
+            const container = document.getElementById('word-container');
+            const allInputs = Array.from(container.querySelectorAll('.word-input'));
+            const idx = parseInt(input.dataset.index);
+
+            // 1. 按下空格或回车 -> 校验
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault(); // 阻止输入空格
+                validateWord(input, allInputs, idx);
+            }
+            // 2. Backspace: 如果当前空，退回上一个（如果上一个没锁定）
+            else if (e.key === 'Backspace' && input.value === '') {
+                if (idx > 0) {
+                    const prev = allInputs[idx - 1];
+                    if (!prev.disabled) {
+                        e.preventDefault();
+                        prev.focus();
+                    }
+                }
+            }
+        }
+
+        function validateWord(input, allInputs, idx) {
+            const val = input.value.trim().toLowerCase();
+            const ans = input.dataset.answer.toLowerCase();
+
+            if (val === ans) {
+                // --- 正确 ---
+                input.classList.add('correct');
+                input.classList.remove('shake');
+                input.disabled = true; // 锁定
+
+                // 检查是否是最后一个
+                if (idx === allInputs.length - 1) {
+                    // 本句完成
+                    setTimeout(() => {
+                        loadSegment(currentSegIndex + 1);
+                    }, 400); // 稍微停顿展示绿色
+                } else {
+                    // 跳到下一个
+                    allInputs[idx + 1].focus();
+                }
+
+            } else {
+                // --- 错误 ---
+                input.classList.add('shake');
+                // 动画结束后移除shake类，以便下次还能触发
+                setTimeout(() => input.classList.remove('shake'), 400);
+            }
+        }
+
+        // --- 辅助功能 ---
+        function playAudio() {
+            if (currentSegIndex >= segments.length) return;
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(segments[currentSegIndex].fullText);
+            utter.lang = 'en-US';
+            utter.rate = 0.9;
+            window.speechSynthesis.speak(utter);
+
+            // 保持焦点在当前未完成的输入框
+            const inputs = document.querySelectorAll('.word-input');
+            for (let inp of inputs) {
+                if (!inp.disabled) {
+                    inp.focus();
+                    break;
+                }
+            }
+        }
+
+        function toggleHint() {
+            const inputs = document.querySelectorAll('.word-input');
+            for (let inp of inputs) {
+                if (!inp.disabled) {
+                    // 填入正确答案并触发校验逻辑
+                    inp.value = inp.dataset.answer;
+                    inp.focus();
+                    // 可选：自动帮用户提交（模拟Enter），或者让用户自己按Enter
+                    // 这里让用户自己按Enter加深印象，或者直接锁定
+                    // inp.classList.add('correct');
+                    // inp.disabled = true;
+                    break;
+                }
+            }
+        }
+
+        // 翻译 API
+        async function fetchTranslation(text) {
+            if (text.length < 2) return "";
+            try {
+                //const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|zh-CN`);
+                const res = await fetch(`https://fog.ephermis.com/get?q=${encodeURIComponent(text)}&source=en&target=zh-Hans&format=text`);
+                const data = await res.json();
+                //return data.responseData.translatedText;
+                return data.translatedText || "";
+            } catch (e) { return "翻译超时"; }
+        }
+
+        // 全局按键
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('game-screen').style.display === 'flex') {
+                if (e.key === 'Control') playAudio();
+                if (e.ctrlKey && e.key.toLowerCase() === 'm') {
+                    e.preventDefault();
+                    toggleHint();
+                }
+            }
+        });
+
+    </script>
+</body>
+
+</html>
