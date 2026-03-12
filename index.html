@@ -2,220 +2,471 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>流利听写 - Instant Check</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DictaMaster</title>
     <style>
         :root {
-            --primary: #2196F3;
-            --success: #4CAF50;
-            --error: #FF5252;
-            --bg: #f8f9fa;
-            --text: #333;
+            /* iOS 现代弥散渐变背景色 */
+            --ios-bg: linear-gradient(135deg, #EAF0FF 0%, #F3EAFB 50%, #FDF4EB 100%); 
+            
+            --ios-card: rgba(255, 255, 255, 0.95); 
+            --ios-blue: #007AFF; 
+            --ios-green: #34C759; 
+            --ios-red: #FF3B30; 
+            
+            --ios-text-primary: #1C1C1E;
+            --ios-text-secondary: #8E8E93;
+            
+            --ios-border: rgba(60, 60, 67, 0.18); 
+            --ios-separator: rgba(60, 60, 67, 0.15);
+            --ios-progress-bg: rgba(0, 0, 0, 0.05);
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background: var(--ios-bg);
+            background-attachment: fixed;
+            background-size: cover;
+            color: var(--ios-text-primary);
             margin: 0;
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* 顶部进度 */
-        .progress-wrap { width: 100%; height: 6px; background: #e9ecef; }
-        .progress-bar { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
-
-        /* 1. 设置界面 */
-        #setup-screen {
-            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
-        }
-        textarea {
-            width: 80%; max-width: 800px; height: 200px; padding: 15px;
-            border: 2px solid #dee2e6; border-radius: 12px; font-size: 16px; resize: none; outline: none;
-            transition: border-color 0.2s;
-        }
-        textarea:focus { border-color: var(--primary); }
-        .btn-start {
-            margin-top: 20px; padding: 12px 40px; background: var(--primary); color: white;
-            border: none; border-radius: 30px; font-size: 18px; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3); transition: transform 0.1s;
-        }
-        .btn-start:active { transform: scale(0.96); }
-
-        /* 2. 听写界面 */
-        #game-screen {
-            display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center;
-            width: 100%; max-width: 900px; margin: 0 auto; padding: 20px;
+        /* iOS 玻璃质感导航栏 */
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            background-color: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(24px) saturate(150%);
+            -webkit-backdrop-filter: blur(24px) saturate(150%);
+            border-bottom: 0.5px solid var(--ios-separator);
+            position: relative;
+            z-index: 20; /* 提高层级 */
         }
 
-        #translation-box {
-            font-size: 22px; color: #555; margin-bottom: 50px; text-align: center;
-            min-height: 30px; font-weight: 500;
+        .top-nav .title {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 17px;
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: -0.4px;
         }
 
-        /* 单词容器 */
-        #word-container {
-            display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; width: 100%;
+        .left-action { width: 70px; } 
+
+        /* ========== 重构：iOS 风格速度菜单 ========== */
+        .speed-control {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            width: 70px;
+        }
+        
+        .ios-speed-btn {
+            appearance: none;
+            background: rgba(0, 122, 255, 0.1); /* iOS 典型淡蓝色按钮背景 */
+            color: var(--ios-blue);
+            border: none;
+            border-radius: 14px;
+            padding: 6px 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: opacity 0.2s, background 0.2s;
+        }
+        
+        .ios-speed-btn:active {
+            opacity: 0.6;
+        }
+        
+        .ios-speed-btn svg {
+            width: 12px; height: 12px; fill: currentColor;
+        }
+
+        /* 上下文悬浮菜单 (Context Menu) */
+        .ios-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            width: 150px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(30px) saturate(200%);
+            -webkit-backdrop-filter: blur(30px) saturate(200%);
+            border-radius: 14px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.05); /* 柔和阴影 + 极细描边 */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            
+            /* 弹出动画初始状态 */
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-10px) scale(0.95);
+            transform-origin: top right;
+            transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        .ios-menu.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0) scale(1);
+        }
+
+        .ios-menu-item {
+            padding: 12px 16px;
+            font-size: 16px;
+            color: var(--ios-text-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border-bottom: 0.5px solid var(--ios-separator);
+            transition: background 0.1s;
+        }
+
+        .ios-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .ios-menu-item:active {
+            background: rgba(0,0,0,0.06); /* 按下时的反馈色 */
+        }
+
+        .ios-menu-item .check-icon {
+            width: 16px;
+            height: 16px;
+            stroke: var(--ios-blue);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            opacity: 0; /* 默认隐藏 */
+        }
+
+        .ios-menu-item.selected .check-icon {
+            opacity: 1; /* 选中时显示 */
+        }
+        /* =============================================== */
+
+        .progress-wrap { 
+            width: 100%; 
+            height: 3px; 
+            background: var(--ios-progress-bg); 
+            z-index: 11;
+        }
+        .progress-bar { 
+            height: 100%; 
+            background: var(--ios-blue); 
+            width: 0%; 
+            border-radius: 0 3px 3px 0;
+            transition: width 0.4s ease-out; 
+        }
+
+        .main-container { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 20px; 
+        }
+        
+        .ios-card {
+            background-color: var(--ios-card); 
+            border-radius: 20px; 
+            padding: 40px 32px;
+            width: 100%; 
+            max-width: 800px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0,0,0,0.02);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .ios-textarea {
+            width: 100%; 
+            background-color: rgba(0, 0, 0, 0.03); 
+            border-radius: 12px;
+            border: 1px solid transparent; 
+            padding: 16px;
+            font-size: 17px; 
+            line-height: 1.4;
+            color: var(--ios-text-primary); 
+            resize: none; 
+            outline: none;
+            height: 180px; 
+            box-sizing: border-box; 
+            transition: border-color 0.2s, background-color 0.2s; 
+            margin-bottom: 24px;
+        }
+        .ios-textarea:focus { 
+            border-color: var(--ios-blue); 
+            background-color: #FFFFFF;
+        }
+
+        .ios-button {
+            background-color: var(--ios-blue); 
+            color: #FFFFFF; 
+            border: none;
+            border-radius: 14px; 
+            padding: 16px 32px; 
+            font-size: 17px; 
+            font-weight: 600; 
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center;
+            width: 80%;
+            max-width: 300px;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2); 
+        }
+        .ios-button:active { 
+            opacity: 0.8; 
+            transform: scale(0.97); 
+        }
+
+        #game-screen { display: none; }
+        
+        #translation-box { 
+            font-size: 22px; 
+            font-weight: 400;
+            color: var(--ios-text-secondary); 
+            margin-bottom: 50px; 
+            text-align: center; 
+            min-height: 32px; 
+            letter-spacing: 0.3px;
+        }
+        
+        #word-container { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            gap: 14px; 
+            width: 100%; 
         }
 
         .input-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; }
 
-        /* 输入框样式 */
         .word-input {
-            font-family: 'Courier New', monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
             font-size: 28px;
-            background: transparent;
+            background: transparent; 
             border: none;
-            border-bottom: 3px solid #ced4da;
+            border-bottom: 2px solid var(--ios-border);
             text-align: center;
-            color: #333;
+            color: var(--ios-text-primary);
             outline: none;
-            padding: 5px 0;
-            transition: all 0.2s;
-            border-radius: 0;
+            padding: 8px 4px;
+            transition: border-bottom-color 0.2s ease, color 0.2s ease;
+            border-radius: 0; 
         }
         
-        .word-input:focus { border-bottom-color: var(--primary); transform: translateY(-2px); }
+        .word-input:focus { border-bottom: 3px solid var(--ios-blue); }
+        .word-input.correct { border-bottom: 3px solid var(--ios-green); color: var(--ios-green); font-weight: 600; }
+        .word-input.shake { animation: ios-shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; border-bottom: 3px solid var(--ios-red); color: var(--ios-red); }
+
+        @keyframes ios-shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        #status-bar { 
+            margin-top: 50px; 
+            display: flex; 
+            gap: 16px; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+        }
+        .key-hint { 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            color: var(--ios-text-secondary); 
+            font-size: 13px;
+        }
+        .key-badge { 
+            background: rgba(0,0,0,0.04); 
+            color: var(--ios-text-primary); 
+            border: 1px solid var(--ios-border);
+            padding: 4px 8px; 
+            border-radius: 6px; 
+            font-weight: 500;
+            font-family: -apple-system, system-ui, sans-serif;
+            font-size: 12px;
+        }
         
-        /* 正确样式 */
-        .word-input.correct {
-            border-bottom-color: var(--success);
-            color: var(--success);
-            font-weight: bold;
-            background-color: rgba(76, 175, 80, 0.05); /* 淡淡的绿色背景 */
-            border-radius: 4px;
-        }
-
-        /* 错误动画 */
-        .word-input.shake { animation: shake 0.4s ease-in-out; border-bottom-color: var(--error); color: var(--error); }
-        
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-6px); }
-            75% { transform: translateX(6px); }
-        }
-
-        /* 底部提示 */
-        #status-bar {
-            margin-top: 40px; font-size: 14px; color: #aaa; display: flex; gap: 20px;
-        }
-        .key-badge {
-            background: #e9ecef; color: #666; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 12px;
-        }
-
-        .loader {
-            display: inline-block; width: 16px; height: 16px; border: 2px solid #ddd;
-            border-top-color: var(--primary); border-radius: 50%; animation: spin 1s infinite linear;
+        .loader { 
+            display: inline-block; 
+            width: 18px; 
+            height: 18px; 
+            border: 2px solid var(--ios-border); 
+            border-top-color: var(--ios-blue); 
+            border-radius: 50%; 
+            animation: spin 1s infinite linear; 
+            vertical-align: middle; 
+            margin-right: 8px; 
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-
     </style>
 </head>
 <body>
 
+    <header class="top-nav">
+        <div class="left-action"></div>
+        <h1 class="title">DictaMaster</h1>
+        
+        <!-- 替换为全新设计的 iOS 菜单组件 -->
+        <div class="speed-control" id="speed-container" style="display: none;">
+            <button class="ios-speed-btn" id="speed-btn">
+                <span id="speed-btn-text">1.0x</span>
+                <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+            </button>
+            <div class="ios-menu" id="speed-menu">
+                <div class="ios-menu-item" data-val="0.5">0.5x <svg class="check-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                <div class="ios-menu-item" data-val="0.75">0.75x <svg class="check-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                <div class="ios-menu-item selected" data-val="1.0">1.0x <svg class="check-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                <div class="ios-menu-item" data-val="1.25">1.25x <svg class="check-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                <div class="ios-menu-item" data-val="1.5">1.5x <svg class="check-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+            </div>
+        </div>
+    </header>
+
     <div class="progress-wrap"><div class="progress-bar" id="progress"></div></div>
 
-    <!-- Setup -->
-    <div id="setup-screen">
-        <h2 style="color: #444;">Step 1: 粘贴英文内容</h2>
-        <textarea id="raw-text" placeholder="Paste your English text here...
+    <main class="main-container" id="setup-screen">
+        <div class="ios-card">
+            <h2 style="margin-top: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">准备材料</h2>
+            <p style="color: var(--ios-text-secondary); margin-bottom: 24px; font-size: 15px;">粘贴英文文本，系统将自动拆分并翻译。</p>
+            <textarea class="ios-textarea" id="raw-text" placeholder="Paste your English text here...
 Example:
-Success is not final, failure is not fatal: it is the courage to continue that counts."></textarea>
-        <button class="btn-start" onclick="initApp()">开始听写 (Start)</button>
-        <p style="font-size:12px; color:#999; margin-top:10px;">系统将按逗号、句号自动拆分，并自动翻译。</p>
-    </div>
-
-    <!-- Game -->
-    <div id="game-screen">
-        <div id="translation-box">正在准备...</div>
-        
-        <div id="word-container">
-            <!-- 动态生成输入框 -->
+Design is not just what it looks like and feels like. Design is how it works."></textarea>
+            <button class="ios-button" onclick="initApp()">开始听写</button>
         </div>
+    </main>
 
-        <div id="status-bar">
-            <span><span class="key-badge">Space</span> 确认并跳转</span>
-            <span><span class="key-badge">Ctrl</span> 重读</span>
-            <span><span class="key-badge">Ctrl + M</span> 提示当前词</span>
+    <main class="main-container" id="game-screen">
+        <div class="ios-card" style="padding-top: 48px; padding-bottom: 48px;">
+            <div id="translation-box">正在准备翻译...</div>
+            <div id="word-container"></div>
+            
+            <div id="status-bar">
+                <div class="key-hint"><span class="key-badge">Space</span> / <span class="key-badge">Enter</span> 确认</div>
+                <div class="key-hint"><span class="key-badge">Ctrl</span> 重新播放</div>
+                <div class="key-hint"><span class="key-badge">Ctrl + M</span> 提示</div>
+            </div>
         </div>
-    </div>
+    </main>
 
     <script>
-        // --- 核心数据 ---
-        let segments = []; // [{text: "Hello,", words: ["Hello"], translation: "你好"}]
+        let segments =[]; 
         let currentSegIndex = 0;
-        
-        // --- 初始化 ---
+        let currentPlaybackRate = 1.0;
+
+        // ========== 新增：iOS 菜单交互逻辑 ==========
+        const speedBtn = document.getElementById('speed-btn');
+        const speedMenu = document.getElementById('speed-menu');
+        const speedItems = document.querySelectorAll('.ios-menu-item');
+        const speedBtnText = document.getElementById('speed-btn-text');
+
+        // 点击按钮展开/收起菜单
+        speedBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // 阻止冒泡
+            speedMenu.classList.toggle('show');
+        });
+
+        // 点击空白处关闭菜单
+        document.addEventListener('click', (e) => {
+            if (!speedMenu.contains(e.target)) {
+                speedMenu.classList.remove('show');
+            }
+        });
+
+        // 选择速度项
+        speedItems.forEach(item => {
+            item.addEventListener('click', () => {
+                // 1. 更新勾选 UI
+                speedItems.forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+                
+                // 2. 更新按钮文字和速度变量
+                currentPlaybackRate = parseFloat(item.dataset.val);
+                speedBtnText.innerText = item.dataset.val + 'x';
+                
+                // 3. 关闭菜单
+                speedMenu.classList.remove('show');
+                
+                // 4. 如果在游戏中，立即重新播放
+                if (document.getElementById('game-screen').style.display === 'flex') {
+                    playAudio();
+                }
+            });
+        });
+        // ============================================
+
         function initApp() {
             const text = document.getElementById('raw-text').value;
             if (!text.trim()) return alert("请输入内容");
 
-            // 1. 预处理文本：按标点符号分割成小段
-            // 正则：匹配非标点内容，后跟可选的标点
             const rawSegments = text.replace(/([,.;?!:])/g, "$1|").split("|");
-            
-            segments = [];
+            segments =[];
             for (let raw of rawSegments) {
                 let cleanText = raw.trim();
                 if (cleanText) {
-                    // 拆分为单词
                     let words = cleanText.split(/\s+/);
-                    segments.push({
-                        fullText: cleanText,
-                        words: words,
-                        translation: null
-                    });
+                    segments.push({ fullText: cleanText, words: words, translation: null });
                 }
             }
-
             if (segments.length === 0) return;
 
             document.getElementById('setup-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'flex';
-            
+            document.getElementById('speed-container').style.display = 'flex'; 
             loadSegment(0);
         }
 
-        // --- 加载一段新的听写 ---
         async function loadSegment(index) {
             if (index >= segments.length) {
-                alert("恭喜！全部听写完成！");
-                location.reload();
-                return;
+                alert("🎉 恭喜！全部听写完成！");
+                location.reload(); return;
             }
             currentSegIndex = index;
-
-            // 进度条
             const pct = (index / segments.length) * 100;
             document.getElementById('progress').style.width = pct + "%";
 
-            // 翻译
             const transBox = document.getElementById('translation-box');
-            transBox.innerHTML = '<span class="loader"></span> 翻译中...';
-            
+            transBox.innerHTML = '<span class="loader"></span> 正在翻译...';
             if (!segments[index].translation) {
                 segments[index].translation = await fetchTranslation(segments[index].fullText);
             }
             transBox.innerText = segments[index].translation;
 
-            // 生成输入框
             renderInputs(segments[index].words);
-
-            // 播放音频
             playAudio();
         }
 
-        // --- 生成单词输入框 ---
         function renderInputs(words) {
             const container = document.getElementById('word-container');
             container.innerHTML = "";
-
             words.forEach((word, idx) => {
-                const cleanWord = word.replace(/[^a-zA-Z0-9']/g, ""); // 去除标点用于校验
-                if (!cleanWord) return; // 跳过纯标点
+                const cleanWord = word.replace(/[^a-zA-Z0-9'-]/g, ""); 
+                if (!cleanWord) return;
 
                 const wrapper = document.createElement('div');
                 wrapper.className = 'input-wrapper';
@@ -225,50 +476,31 @@ Success is not final, failure is not fatal: it is the courage to continue that c
                 input.type = 'text';
                 input.autocomplete = "off";
                 input.spellcheck = false;
-                
-                // 计算大致宽度 (ch单位)
-                input.style.width = Math.max(cleanWord.length, 2) + 2 + 'ch';
-                
-                // 数据绑定
+                input.style.width = Math.max(cleanWord.length, 2) + 1.5 + 'ch';
                 input.dataset.answer = cleanWord;
                 input.dataset.index = idx;
-                
-                // 事件监听
                 input.addEventListener('keydown', handleKeydown);
-                input.addEventListener('input', (e) => {
-                    // 兼容性：如果用户输入的内容完全匹配（包括大小写），也可以自动触发（可选）
-                    // 这里为了防止误触，我们主要依赖 Space/Enter
-                });
 
                 wrapper.appendChild(input);
                 container.appendChild(wrapper);
             });
-
-            // 聚焦第一个
             const firstInput = container.querySelector('input');
             if (firstInput) firstInput.focus();
         }
 
-        // --- 核心交互逻辑 ---
         function handleKeydown(e) {
             const input = e.target;
             const container = document.getElementById('word-container');
             const allInputs = Array.from(container.querySelectorAll('.word-input'));
             const idx = parseInt(input.dataset.index);
 
-            // 1. 按下空格或回车 -> 校验
             if (e.key === ' ' || e.key === 'Enter') {
-                e.preventDefault(); // 阻止输入空格
+                e.preventDefault(); 
                 validateWord(input, allInputs, idx);
-            }
-            // 2. Backspace: 如果当前空，退回上一个（如果上一个没锁定）
-            else if (e.key === 'Backspace' && input.value === '') {
+            } else if (e.key === 'Backspace' && input.value === '') {
                 if (idx > 0) {
                     const prev = allInputs[idx - 1];
-                    if (!prev.disabled) {
-                        e.preventDefault();
-                        prev.focus();
-                    }
+                    if (!prev.disabled) { e.preventDefault(); prev.focus(); }
                 }
             }
         }
@@ -278,46 +510,32 @@ Success is not final, failure is not fatal: it is the courage to continue that c
             const ans = input.dataset.answer.toLowerCase();
 
             if (val === ans) {
-                // --- 正确 ---
                 input.classList.add('correct');
                 input.classList.remove('shake');
-                input.disabled = true; // 锁定
-                
-                // 检查是否是最后一个
+                input.disabled = true; 
                 if (idx === allInputs.length - 1) {
-                    // 本句完成
-                    setTimeout(() => {
-                        loadSegment(currentSegIndex + 1);
-                    }, 400); // 稍微停顿展示绿色
+                    setTimeout(() => { loadSegment(currentSegIndex + 1); }, 400); 
                 } else {
-                    // 跳到下一个
                     allInputs[idx + 1].focus();
                 }
-
             } else {
-                // --- 错误 ---
+                input.classList.remove('shake'); 
+                void input.offsetWidth; 
                 input.classList.add('shake');
-                // 动画结束后移除shake类，以便下次还能触发
-                setTimeout(() => input.classList.remove('shake'), 400);
             }
         }
 
-        // --- 辅助功能 ---
         function playAudio() {
             if (currentSegIndex >= segments.length) return;
             window.speechSynthesis.cancel();
             const utter = new SpeechSynthesisUtterance(segments[currentSegIndex].fullText);
             utter.lang = 'en-US';
-            utter.rate = 0.9;
+            utter.rate = currentPlaybackRate;
             window.speechSynthesis.speak(utter);
             
-            // 保持焦点在当前未完成的输入框
             const inputs = document.querySelectorAll('.word-input');
             for (let inp of inputs) {
-                if (!inp.disabled) {
-                    inp.focus();
-                    break;
-                }
+                if (!inp.disabled) { inp.focus(); break; }
             }
         }
 
@@ -325,39 +543,27 @@ Success is not final, failure is not fatal: it is the courage to continue that c
             const inputs = document.querySelectorAll('.word-input');
             for (let inp of inputs) {
                 if (!inp.disabled) {
-                    // 填入正确答案并触发校验逻辑
                     inp.value = inp.dataset.answer;
-                    inp.focus();
-                    // 可选：自动帮用户提交（模拟Enter），或者让用户自己按Enter
-                    // 这里让用户自己按Enter加深印象，或者直接锁定
-                    // inp.classList.add('correct');
-                    // inp.disabled = true;
-                    break;
+                    inp.focus(); break;
                 }
             }
         }
 
-        // 翻译 API
         async function fetchTranslation(text) {
             if (text.length < 2) return "";
             try {
                 const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|zh-CN`);
                 const data = await res.json();
                 return data.responseData.translatedText;
-            } catch (e) { return "翻译超时"; }
+            } catch (e) { return "获取翻译失败，请检查网络。"; }
         }
 
-        // 全局按键
         document.addEventListener('keydown', (e) => {
             if (document.getElementById('game-screen').style.display === 'flex') {
-                if (e.key === 'Control') playAudio();
-                if (e.ctrlKey && e.key.toLowerCase() === 'm') {
-                    e.preventDefault();
-                    toggleHint();
-                }
+                if (e.key === 'Control') { e.preventDefault(); playAudio(); }
+                if (e.ctrlKey && e.key.toLowerCase() === 'm') { e.preventDefault(); toggleHint(); }
             }
         });
-
     </script>
 </body>
 </html>
