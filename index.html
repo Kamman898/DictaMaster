@@ -439,11 +439,11 @@ Success is not final, failure is not fatal: it is the courage to continue that c
         async function fetchTranslation(text) {
             if (text.length < 2) return "";
             try {
-                //const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|zh-CN`);
-                const res = await fetch(`https://fog.ephermis.com/get?q=${encodeURIComponent(text)}&source=en&target=zh-Hans&format=text`);
+                const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|zh-CN`);
+                //const res = await fetch(`https://fog.ephermis.com/get?q=${encodeURIComponent(text)}&source=en&target=zh-Hans&format=text`);
                 const data = await res.json();
-                //return data.responseData.translatedText;
-                return data.translatedText || "";
+                return data.responseData.translatedText;
+                //return data.translatedText || "";
             } catch (e) { return "翻译超时"; }
         }
 
