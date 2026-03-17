@@ -47,7 +47,7 @@
             -webkit-backdrop-filter: blur(24px) saturate(150%);
             border-bottom: 0.5px solid var(--ios-separator);
             position: relative;
-            z-index: 20; /* 提高层级 */
+            z-index: 20; 
         }
 
         .top-nav .title {
@@ -62,7 +62,7 @@
 
         .left-action { width: 70px; } 
 
-        /* ========== 重构：iOS 风格速度菜单 ========== */
+        /* iOS 风格速度菜单 */
         .speed-control {
             position: relative;
             display: flex;
@@ -73,7 +73,7 @@
         
         .ios-speed-btn {
             appearance: none;
-            background: rgba(0, 122, 255, 0.1); /* iOS 典型淡蓝色按钮背景 */
+            background: rgba(0, 122, 255, 0.1); 
             color: var(--ios-blue);
             border: none;
             border-radius: 14px;
@@ -95,7 +95,7 @@
             width: 12px; height: 12px; fill: currentColor;
         }
 
-        /* 上下文悬浮菜单 (Context Menu) */
+        /* 上下文悬浮菜单 */
         .ios-menu {
             position: absolute;
             top: calc(100% + 10px);
@@ -105,12 +105,11 @@
             backdrop-filter: blur(30px) saturate(200%);
             -webkit-backdrop-filter: blur(30px) saturate(200%);
             border-radius: 14px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.05); /* 柔和阴影 + 极细描边 */
+            box-shadow: 0 10px 40px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.05); 
             display: flex;
             flex-direction: column;
             overflow: hidden;
             
-            /* 弹出动画初始状态 */
             opacity: 0;
             pointer-events: none;
             transform: translateY(-10px) scale(0.95);
@@ -141,7 +140,7 @@
         }
 
         .ios-menu-item:active {
-            background: rgba(0,0,0,0.06); /* 按下时的反馈色 */
+            background: rgba(0,0,0,0.06); 
         }
 
         .ios-menu-item .check-icon {
@@ -152,14 +151,14 @@
             stroke-linecap: round;
             stroke-linejoin: round;
             fill: none;
-            opacity: 0; /* 默认隐藏 */
+            opacity: 0; 
         }
 
         .ios-menu-item.selected .check-icon {
-            opacity: 1; /* 选中时显示 */
+            opacity: 1; 
         }
-        /* =============================================== */
 
+        /* 进度条 */
         .progress-wrap { 
             width: 100%; 
             height: 3px; 
@@ -218,6 +217,7 @@
             background-color: #FFFFFF;
         }
 
+        /* 开始听写按钮 */
         .ios-button {
             background-color: var(--ios-blue); 
             color: #FFFFFF; 
@@ -287,31 +287,55 @@
             40%, 60% { transform: translate3d(6px, 0, 0); }
         }
 
-        #status-bar { 
-            margin-top: 50px; 
-            display: flex; 
-            gap: 16px; 
-            flex-wrap: wrap; 
-            justify-content: center; 
+        /* ========== 重构：iOS 风格操作按钮栏 ========== */
+        #action-bar {
+            margin-top: 50px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
         }
-        .key-hint { 
-            display: flex; 
-            align-items: center; 
-            gap: 6px; 
-            color: var(--ios-text-secondary); 
-            font-size: 13px;
+
+        .ios-action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 12px 20px;
+            border-radius: 100px; /* 完美的胶囊形状 */
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s, background-color 0.2s;
         }
-        .key-badge { 
-            background: rgba(0,0,0,0.04); 
-            color: var(--ios-text-primary); 
-            border: 1px solid var(--ios-border);
-            padding: 4px 8px; 
-            border-radius: 6px; 
-            font-weight: 500;
-            font-family: -apple-system, system-ui, sans-serif;
-            font-size: 12px;
+
+        .ios-action-btn svg {
+            width: 18px;
+            height: 18px;
         }
-        
+
+        .ios-action-btn:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+
+        /* 次级按钮 (淡蓝色底) */
+        .ios-action-btn.secondary {
+            background-color: rgba(0, 122, 255, 0.08);
+            color: var(--ios-blue);
+        }
+
+        /* 主按钮 (系统蓝底) */
+        .ios-action-btn.primary {
+            background-color: var(--ios-blue);
+            color: #FFFFFF;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
+            padding: 12px 28px; /* 主按钮稍微长一点 */
+        }
+        /* ============================================== */
+
         .loader { 
             display: inline-block; 
             width: 18px; 
@@ -332,7 +356,6 @@
         <div class="left-action"></div>
         <h1 class="title">DictaMaster</h1>
         
-        <!-- 替换为全新设计的 iOS 菜单组件 -->
         <div class="speed-control" id="speed-container" style="display: none;">
             <button class="ios-speed-btn" id="speed-btn">
                 <span id="speed-btn-text">1.0x</span>
@@ -362,14 +385,31 @@ Design is not just what it looks like and feels like. Design is how it works."><
     </main>
 
     <main class="main-container" id="game-screen">
-        <div class="ios-card" style="padding-top: 48px; padding-bottom: 48px;">
+        <div class="ios-card" style="padding-top: 48px; padding-bottom: 40px;">
             <div id="translation-box">正在准备翻译...</div>
             <div id="word-container"></div>
             
-            <div id="status-bar">
-                <div class="key-hint"><span class="key-badge">Space</span> / <span class="key-badge">Enter</span> 确认</div>
-                <div class="key-hint"><span class="key-badge">Ctrl</span> 重新播放</div>
-                <div class="key-hint"><span class="key-badge">Ctrl + M</span> 提示</div>
+            <!-- 全新设计的控制按钮栏 -->
+            <div id="action-bar">
+                <button class="ios-action-btn secondary" onclick="playAudio()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-8.36l5.67-5.67"/>
+                    </svg>
+                    重播
+                </button>
+                <button class="ios-action-btn secondary" onclick="toggleHint()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    提示
+                </button>
+                <button class="ios-action-btn primary" onclick="handleConfirmBtn()">
+                    确认
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </button>
             </div>
         </div>
     </main>
@@ -379,46 +419,38 @@ Design is not just what it looks like and feels like. Design is how it works."><
         let currentSegIndex = 0;
         let currentPlaybackRate = 1.0;
 
-        // ========== 新增：iOS 菜单交互逻辑 ==========
+        // iOS 菜单交互逻辑
         const speedBtn = document.getElementById('speed-btn');
         const speedMenu = document.getElementById('speed-menu');
         const speedItems = document.querySelectorAll('.ios-menu-item');
         const speedBtnText = document.getElementById('speed-btn-text');
 
-        // 点击按钮展开/收起菜单
         speedBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // 阻止冒泡
+            e.stopPropagation(); 
             speedMenu.classList.toggle('show');
         });
 
-        // 点击空白处关闭菜单
         document.addEventListener('click', (e) => {
             if (!speedMenu.contains(e.target)) {
                 speedMenu.classList.remove('show');
             }
         });
 
-        // 选择速度项
         speedItems.forEach(item => {
             item.addEventListener('click', () => {
-                // 1. 更新勾选 UI
                 speedItems.forEach(i => i.classList.remove('selected'));
                 item.classList.add('selected');
                 
-                // 2. 更新按钮文字和速度变量
                 currentPlaybackRate = parseFloat(item.dataset.val);
                 speedBtnText.innerText = item.dataset.val + 'x';
                 
-                // 3. 关闭菜单
                 speedMenu.classList.remove('show');
                 
-                // 4. 如果在游戏中，立即重新播放
                 if (document.getElementById('game-screen').style.display === 'flex') {
                     playAudio();
                 }
             });
         });
-        // ============================================
 
         function initApp() {
             const text = document.getElementById('raw-text').value;
@@ -494,6 +526,7 @@ Design is not just what it looks like and feels like. Design is how it works."><
             const allInputs = Array.from(container.querySelectorAll('.word-input'));
             const idx = parseInt(input.dataset.index);
 
+            // 保留原有快捷键：空格或回车也能确认
             if (e.key === ' ' || e.key === 'Enter') {
                 e.preventDefault(); 
                 validateWord(input, allInputs, idx);
@@ -504,6 +537,21 @@ Design is not just what it looks like and feels like. Design is how it works."><
                 }
             }
         }
+
+        // ========== 新增：按钮触发的确认逻辑 ==========
+        function handleConfirmBtn() {
+            const container = document.getElementById('word-container');
+            const allInputs = Array.from(container.querySelectorAll('.word-input'));
+            
+            // 智能定位：找到第一个还没被禁用的输入框（即当前正在填的空）
+            const currentInput = allInputs.find(inp => !inp.disabled);
+            
+            if (currentInput) {
+                const idx = parseInt(currentInput.dataset.index);
+                validateWord(currentInput, allInputs, idx);
+            }
+        }
+        // ===============================================
 
         function validateWord(input, allInputs, idx) {
             const val = input.value.trim().toLowerCase();
@@ -522,6 +570,9 @@ Design is not just what it looks like and feels like. Design is how it works."><
                 input.classList.remove('shake'); 
                 void input.offsetWidth; 
                 input.classList.add('shake');
+                
+                // 错误时保持焦点，方便用户直接修改
+                input.focus(); 
             }
         }
 
@@ -533,6 +584,7 @@ Design is not just what it looks like and feels like. Design is how it works."><
             utter.rate = currentPlaybackRate;
             window.speechSynthesis.speak(utter);
             
+            // 播放后自动把焦点还原到正确的输入框，无缝衔接
             const inputs = document.querySelectorAll('.word-input');
             for (let inp of inputs) {
                 if (!inp.disabled) { inp.focus(); break; }
@@ -558,6 +610,7 @@ Design is not just what it looks like and feels like. Design is how it works."><
             } catch (e) { return "获取翻译失败，请检查网络。"; }
         }
 
+        // 全局键盘监听（仍保留 Ctrl 等物理按键支持，双管齐下）
         document.addEventListener('keydown', (e) => {
             if (document.getElementById('game-screen').style.display === 'flex') {
                 if (e.key === 'Control') { e.preventDefault(); playAudio(); }
